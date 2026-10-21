@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.calc-btn {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+  padding: 0.75rem 0;
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+  transition: background-color .15s ease;
+}
+
+.calc-btn:hover { background: #e2e8f0; }
+.calc-btn:active { background: #cbd5e1; }
+
+.calc-btn-op {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  padding: 0.75rem 0;
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+  transition: background-color .15s ease;
+}
+
+.calc-btn-op:hover { background: #fde68a; }
