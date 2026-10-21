@@ -5,7 +5,7 @@
 const CONFIG = window.UKP_CONFIG || {};
 const SCRIPT_URL = CONFIG.SCRIPT_URL || '';
 const QUESTION_BANK_URL = CONFIG.QUESTION_BANK_URL || './data/Bank_Soal_Simulasi_UKP_A_B_C_300_Soal.json';
-const PASSING_SCORE = Number(CONFIG.PASSING_SCORE ?? 70);
+const PASSING_SCORE = Number(CONFIG.PASSING_SCORE ?? 60);
 
 let BANK_SOAL = { A: [], B: [], C: [] };
 
