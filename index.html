@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi UKP - Pajakbareng Stanley</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between antialiased">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white font-bold text-xl">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg md:text-xl leading-tight">Simulasi Soal UKP</h1>
+                    <p class="text-xs text-indigo-200">Pajakbareng Stanley</p>
+                </div>
+            </div>
+            <button id="toggleCalcBtn" onclick="toggleCalculator()" class="hidden bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center space-x-2 transition border border-indigo-600 shadow-sm">
+                <i class="fa-solid fa-calculator text-amber-400"></i>
+                <span>Kalkulator Pajak</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ANNOUNCEMENT BANNER -->
+    <div class="bg-amber-50 border-b border-amber-200 text-amber-900 text-xs md:text-sm py-2.5 px-4 text-center font-medium">
+        <div class="max-w-5xl mx-auto flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-circle-info text-amber-600 flex-shrink-0"></i>
+            <span>Materi dalam simulasi soal UKP ini akan selalu dalam penyempurnaan. Apabila ada usulan soal atau menemukan jawaban yang kurang sesuai, silakan memberikan informasi kepada <strong>pajakbarengstanley</strong> melalui WhatsApp <strong>081284596836</strong>.</span>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-4xl mx-auto w-full px-4 py-6 flex-grow">
+
+        <!-- 1. REGISTRATION FORM SCREEN -->
+        <section id="regScreen" class="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 md:p-8">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 rounded-full bg-indigo-50 text-indigo-600 mb-2">
+                    <i class="fa-solid fa-user-pen text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Registrasi Latihan UKP</h2>
+                <p class="text-slate-500 text-sm mt-1">Lengkapi identitas untuk memulai simulasi Uji Kompetensi Perpajakan</p>
+            </div>
+
+            <form id="regForm" onsubmit="startQuiz(event)" class="space-y-4 max-w-lg mx-auto">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                    <input type="text" id="inputNama" required placeholder="Contoh: Budi Santoso" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-800 transition">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Alamat Email <span class="text-red-500">*</span></label>
+                    <input type="email" id="inputEmail" required placeholder="nama@email.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-800 transition">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Nomor HP / WhatsApp <span class="text-red-500">*</span></label>
+                    <input type="tel" id="inputHp" required placeholder="081234567890" pattern="[0-9]{9,15}" title="Masukkan nomor HP valid (9-15 digit angka)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-800 transition">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Tingkat UKP <span class="text-red-500">*</span></label>
+                        <select id="selectTingkat" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-800 bg-white font-medium">
+                            <option value="A">Tingkat A (OP, KUP, PPN, Meterai)</option>
+                            <option value="B">Tingkat B (Badan, PBB, Akuntansi)</option>
+                            <option value="C">Tingkat C (Int'l Tax, BUT, PPh)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Jumlah Soal <span class="text-red-500">*</span></label>
+                        <select id="selectMode" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-800 bg-white font-medium">
+                            <option value="20">Modul Ringkas (20 Soal)</option>
+                            <option value="100">Ujian Penuh (100 Soal)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="dataStatus" class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    Memuat bank soal...
+                </div>
+
+                <div class="pt-4">
+                    <button id="startButton" type="submit" disabled class="w-full bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-indigo-200 transition duration-200 flex items-center justify-center space-x-2 text-base">
+                        <span>Mulai Simulasi Soal</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 2. QUIZ SCREEN -->
+        <section id="quizScreen" class="hidden space-y-4">
+            <!-- Quiz Meta Bar -->
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <span id="quizBadge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full border border-indigo-200">Tingkat A</span>
+                    <span id="quizProgress" class="text-sm font-semibold text-slate-600">Soal 1 dari 20</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-slate-700 font-mono font-semibold bg-slate-100 px-3 py-1 rounded-lg">
+                        <i class="fa-regular fa-clock text-indigo-600"></i>
+                        <span id="timerDisplay">00:00</span>
+                    </div>
+                    <button onclick="openQuestionGrid()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center space-x-1">
+                        <i class="fa-solid fa-border-all"></i>
+                        <span class="hidden sm:inline">Navigasi Soal</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 space-y-6">
+                <div>
+                    <div class="flex items-center justify-between text-xs text-slate-400 font-semibold mb-2 uppercase tracking-wider">
+                        <span id="questionCategory">KUP / PPSP / PP</span>
+                        <span id="questionDifficulty" class="text-emerald-600">Mudah</span>
+                    </div>
+                    <p id="questionText" class="text-slate-900 font-medium text-base md:text-lg leading-relaxed">
+                        Memuat pertanyaan...
+                    </p>
+                </div>
+
+                <!-- Options -->
+                <div id="optionsContainer" class="space-y-3">
+                    <!-- Options injected dynamically -->
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+                    <button id="prevBtn" onclick="navigateQuestion(-1)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium text-sm transition flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left"></i>
+                        <span>Sebelumnya</span>
+                    </button>
+
+                    <button id="nextBtn" onclick="navigateQuestion(1)" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition flex items-center space-x-2 shadow-sm">
+                        <span>Berikutnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+
+                    <button id="finishBtn" onclick="confirmFinishQuiz()" class="hidden px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-sm transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Selesai & Lihat Hasil</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. RESULT SCREEN -->
+        <section id="resultScreen" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 md:p-8 text-center space-y-6">
+                <div>
+                    <div id="resultStatusIcon" class="inline-flex p-4 rounded-full bg-emerald-100 text-emerald-600 mb-3 text-3xl">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-slate-900">Hasil Simulasi UKP</h2>
+                    <p id="resultUserMeta" class="text-slate-500 text-sm mt-1">Nama Pengguna - Tingkat A</p>
+                </div>
+
+                <!-- Score Badge -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 max-w-sm mx-auto space-y-2">
+                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest">NILAI AKHIR</div>
+                    <div id="resultScore" class="text-5xl font-black text-indigo-600">0.0</div>
+                    <div id="resultBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                        Sangat Baik
+                    </div>
+                </div>
+
+                <!-- Summary Breakdown -->
+                <div class="grid grid-cols-3 gap-3 max-w-md mx-auto text-center">
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+                        <div class="text-xs text-emerald-700 font-medium">Benar</div>
+                        <div id="resCorrect" class="text-xl font-bold text-emerald-800">0</div>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 p-3 rounded-xl">
+                        <div class="text-xs text-red-700 font-medium">Salah</div>
+                        <div id="resWrong" class="text-xl font-bold text-red-800">0</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                        <div class="text-xs text-blue-700 font-medium">Waktu</div>
+                        <div id="resTime" class="text-xl font-bold text-blue-800">00:00</div>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+                    <button onclick="toggleReviewSection()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Lihat Pembahasan Soal</span>
+                    </button>
+                    <button onclick="resetApp()" class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-xl transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Coba Simulasi Lagi</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- REVIEW & EXPLANATION SECTION -->
+            <div id="reviewSection" class="hidden space-y-4">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-book-open text-indigo-600"></i>
+                    <span>Pembahasan & Kunci Jawaban</span>
+                </h3>
+                <div id="reviewContainer" class="space-y-4">
+                    <!-- Dynamic Answer Review -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FLOATING CALCULATOR MODAL -->
+    <div id="calcModal" class="hidden fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 no-select">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2 text-indigo-900 font-bold text-sm">
+                <i class="fa-solid fa-calculator text-amber-500"></i>
+                <span>Kalkulator Pajak UKP</span>
+            </div>
+            <button onclick="toggleCalculator()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Calc Screen -->
+        <div class="bg-slate-900 text-right p-3 rounded-xl mb-3">
+            <div id="calcDisplayPrev" class="text-slate-400 text-xs min-h-[1rem] truncate"></div>
+            <div id="calcDisplayCur" class="text-white text-2xl font-mono font-bold truncate">0</div>
+        </div>
+
+        <!-- Calc Buttons -->
+        <div class="grid grid-cols-4 gap-2 text-sm">
+            <button onclick="calcClear()" class="col-span-2 bg-red-100 text-red-700 hover:bg-red-200 font-bold py-2.5 rounded-lg transition">C</button>
+            <button onclick="calcDelete()" class="bg-slate-200 text-slate-700 hover:bg-slate-300 font-bold py-2.5 rounded-lg transition"><i class="fa-solid fa-backspace"></i></button>
+            <button onclick="calcOp('/')" class="calc-btn-op">÷</button>
+
+            <button onclick="calcNum('7')" class="calc-btn">7</button>
+            <button onclick="calcNum('8')" class="calc-btn">8</button>
+            <button onclick="calcNum('9')" class="calc-btn">9</button>
+            <button onclick="calcOp('*')" class="calc-btn-op">×</button>
+
+            <button onclick="calcNum('4')" class="calc-btn">4</button>
+            <button onclick="calcNum('5')" class="calc-btn">5</button>
+            <button onclick="calcNum('6')" class="calc-btn">6</button>
+            <button onclick="calcOp('-')" class="calc-btn-op">-</button>
+
+            <button onclick="calcNum('1')" class="calc-btn">1</button>
+            <button onclick="calcNum('2')" class="calc-btn">2</button>
+            <button onclick="calcNum('3')" class="calc-btn">3</button>
+            <button onclick="calcOp('+')" class="calc-btn-op">+</button>
+
+            <button onclick="calcNum('0')" class="calc-btn col-span-2">0</button>
+            <button onclick="calcNum('.')" class="calc-btn">.</button>
+            <button onclick="calcEqual()" class="bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-2.5 rounded-lg transition shadow">=</button>
+        </div>
+    </div>
+
+    <!-- QUESTION GRID MODAL -->
+    <div id="gridModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-900 text-lg">Lembar Navigasi Soal</h3>
+                <button onclick="closeQuestionGrid()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="questionGridBtns" class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1">
+                <!-- Grid buttons injected dynamically -->
+            </div>
+            <div class="text-xs text-slate-500 flex justify-around pt-2 border-t">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-indigo-600 rounded-full inline-block"></span> Terjawab</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-slate-200 rounded-full inline-block"></span> Belum</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto space-y-1">
+            <p><strong>Pajakbareng Stanley</strong> &copy; 2026 - Bank Soal Latihan Simulasi UKP A, B, C</p>
+            <p class="text-slate-400">Pertanyaan/Saran Soal via WhatsApp: <a href="https://wa.me/6281284596836" target="_blank" class="text-indigo-600 hover:underline">081284596836</a></p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT APP ENGINE -->
+    <script src="./assets/js/config.js"></script>
+    <script src="./assets/js/app.js"></script>
+</body>
+</html>
