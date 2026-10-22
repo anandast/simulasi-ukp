@@ -138,6 +138,36 @@ function shuffleArray(items) {
   return copy;
 }
 
+
+function selectLevel(level) {
+  if (!['A', 'B', 'C'].includes(level)) return;
+  document.getElementById('selectTingkat').value = level;
+  document.querySelectorAll('.level-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.level === level);
+  });
+}
+
+function selectMode(mode) {
+  const value = Number(mode) === 100 ? 100 : 20;
+  document.getElementById('selectMode').value = String(value);
+  document.querySelectorAll('.mode-card').forEach(card => {
+    card.classList.toggle('active', Number(card.dataset.mode) === value);
+  });
+  const summary = document.getElementById('summaryQuestionCount');
+  if (summary) summary.textContent = `${value} PG`;
+}
+
+function updateQuizSummary() {
+  const answered = Object.keys(appState.answers).length;
+  const total = appState.questions.length;
+  const answeredLabel = document.getElementById('answeredProgress');
+  const sideAnswered = document.getElementById('sideAnswered');
+  const sideUnanswered = document.getElementById('sideUnanswered');
+  if (answeredLabel) answeredLabel.textContent = `${answered} terjawab`;
+  if (sideAnswered) sideAnswered.textContent = answered;
+  if (sideUnanswered) sideUnanswered.textContent = Math.max(total - answered, 0);
+}
+
 // ==========================================
 // 2. SESSION PERSISTENCE
 // ==========================================
@@ -211,6 +241,8 @@ function restoreSession() {
   };
   appState.tingkat = saved.tingkat;
   appState.mode = Number(saved.mode) || restoredQuestions.length;
+  selectLevel(appState.tingkat);
+  selectMode(appState.mode);
   appState.questions = restoredQuestions;
   appState.answers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
   appState.currentIndex = Math.min(
@@ -353,9 +385,12 @@ function startTimer() {
 }
 
 function updateTimerDisplay() {
-  const m = Math.floor(appState.timerSeconds / 60).toString().padStart(2, '0');
-  const s = (appState.timerSeconds % 60).toString().padStart(2, '0');
-  document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+  const remaining = Math.max(MAX_TIME_SECONDS - appState.timerSeconds, 0);
+  const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
+  const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
+  const s = (remaining % 60).toString().padStart(2, '0');
+  const display = document.getElementById('timerDisplay');
+  if (display) display.innerText = `${h}:${m}:${s}`;
 }
 
 function renderQuestion() {
@@ -363,6 +398,7 @@ function renderQuestion() {
   if (!q) return;
 
   document.getElementById('quizProgress').innerText = `Soal ${appState.currentIndex + 1} dari ${appState.questions.length}`;
+  updateQuizSummary();
   document.getElementById('questionCategory').innerText = q.cat;
   document.getElementById('questionDifficulty').innerText = q.diff;
   document.getElementById('questionText').innerText = q.q;
@@ -589,6 +625,8 @@ function resetApp() {
   document.getElementById('reviewSection').classList.add('hidden');
   document.getElementById('regScreen').classList.remove('hidden');
   document.getElementById('regForm').reset();
+  selectLevel('A');
+  selectMode(20);
   appState.answers = {};
   appState.questions = [];
   appState.currentIndex = 0;
