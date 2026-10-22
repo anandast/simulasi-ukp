@@ -6,6 +6,9 @@ const CONFIG = window.UKP_CONFIG || {};
 const SCRIPT_URL = CONFIG.SCRIPT_URL || '';
 const QUESTION_BANK_URL = CONFIG.QUESTION_BANK_URL || './data/Bank_Soal_Simulasi_UKP_A_B_C_300_Soal.json';
 const PASSING_SCORE = Number(CONFIG.PASSING_SCORE ?? 60);
+const MAX_TIME_MINUTES = Number(CONFIG.MAX_TIME_MINUTES ?? 180);
+const MAX_TIME_SECONDS = MAX_TIME_MINUTES * 60;
+const SESSION_KEY = 'ukp_simulasi_session_v1';
 
 let BANK_SOAL = { A: [], B: [], C: [] };
 
@@ -44,6 +47,9 @@ async function initApp() {
     dataStatus.textContent = `Bank soal siap — ${counts}`;
     dataStatus.className = 'text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3';
     startButton.disabled = false;
+
+    // Setelah bank soal tersedia, pulihkan sesi aktif (jika ada).
+    restoreSession();
   } catch (error) {
     console.error('Gagal memuat bank soal:', error);
     dataStatus.innerHTML = `Gagal memuat bank soal. Pastikan file JSON berada di <strong>data/</strong> dan situs dijalankan melalui GitHub Pages/HTTP server.`;
@@ -133,7 +139,151 @@ function shuffleArray(items) {
 }
 
 // ==========================================
-// 2. QUIZ LOGIC
+// 2. SESSION PERSISTENCE
+// ==========================================
+
+function buildSessionPayload(screen = 'quiz') {
+  return {
+    version: 1,
+    screen,
+    savedAt: Date.now(),
+    user: { ...appState.user },
+    tingkat: appState.tingkat,
+    mode: appState.mode,
+    questionIds: appState.questions.map(q => q.id),
+    answers: { ...appState.answers },
+    currentIndex: appState.currentIndex,
+    timerSeconds: appState.timerSeconds
+  };
+}
+
+function saveSession(screen = 'quiz') {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(buildSessionPayload(screen)));
+  } catch (err) {
+    console.warn('Sesi simulasi tidak dapat disimpan:', err);
+  }
+}
+
+function clearSession() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch (err) {
+    console.warn('Sesi simulasi tidak dapat dihapus:', err);
+  }
+}
+
+function getSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('Sesi simulasi tidak dapat dibaca:', err);
+    return null;
+  }
+}
+
+function restoreSession() {
+  const saved = getSession();
+  if (!saved || saved.version !== 1) return false;
+  if (!['A', 'B', 'C'].includes(saved.tingkat)) {
+    clearSession();
+    return false;
+  }
+
+  const source = BANK_SOAL[saved.tingkat] || [];
+  const byId = new Map(source.map(q => [q.id, q]));
+  const savedQuestionIds = Array.isArray(saved.questionIds) ? saved.questionIds : [];
+  const restoredQuestions = savedQuestionIds.map(id => byId.get(id)).filter(Boolean);
+
+  // Jika struktur bank soal berubah sehingga soal sesi tidak lagi lengkap,
+  // sesi dibatalkan agar kunci/jawaban tidak salah pasangan.
+  if (!restoredQuestions.length || restoredQuestions.length !== savedQuestionIds.length) {
+    clearSession();
+    return false;
+  }
+
+  appState.user = {
+    nama: saved.user?.nama || '',
+    email: saved.user?.email || '',
+    hp: saved.user?.hp || ''
+  };
+  appState.tingkat = saved.tingkat;
+  appState.mode = Number(saved.mode) || restoredQuestions.length;
+  appState.questions = restoredQuestions;
+  appState.answers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
+  appState.currentIndex = Math.min(
+    Math.max(Number(saved.currentIndex) || 0, 0),
+    restoredQuestions.length - 1
+  );
+
+  const elapsedWhileReloading = saved.screen === 'quiz' && saved.savedAt
+    ? Math.max(0, Math.floor((Date.now() - Number(saved.savedAt)) / 1000))
+    : 0;
+  appState.timerSeconds = Math.min(
+    MAX_TIME_SECONDS,
+    Math.max(0, Number(saved.timerSeconds) || 0) + elapsedWhileReloading
+  );
+
+  document.getElementById('regScreen').classList.add('hidden');
+  document.getElementById('quizBadge').innerText = 'Tingkat ' + appState.tingkat;
+
+  if (saved.screen === 'result') {
+    restoreResultScreen();
+  } else if (appState.timerSeconds >= MAX_TIME_SECONDS) {
+    // Jika waktu habis ketika halaman ditutup/di-refresh, ujian langsung diselesaikan.
+    updateTimerDisplay();
+    finishQuiz(true);
+  } else {
+    document.getElementById('resultScreen').classList.add('hidden');
+    document.getElementById('quizScreen').classList.remove('hidden');
+    document.getElementById('toggleCalcBtn').classList.remove('hidden');
+    startTimer();
+    renderQuestion();
+  }
+
+  return true;
+}
+
+function restoreResultScreen() {
+  clearInterval(appState.timerInterval);
+
+  let correctCount = 0;
+  appState.questions.forEach((q, idx) => {
+    if (Number(appState.answers[idx]) === q.key) correctCount++;
+  });
+
+  const total = appState.questions.length;
+  const finalScore = total ? ((correctCount / total) * 100).toFixed(1) : '0.0';
+  const wrongCount = total - correctCount;
+  const m = Math.floor(appState.timerSeconds / 60).toString().padStart(2, '0');
+  const s = (appState.timerSeconds % 60).toString().padStart(2, '0');
+
+  document.getElementById('quizScreen').classList.add('hidden');
+  document.getElementById('resultScreen').classList.remove('hidden');
+  document.getElementById('toggleCalcBtn').classList.add('hidden');
+
+  document.getElementById('resultUserMeta').innerText = `${appState.user.nama} • Tingkat ${appState.tingkat}`;
+  document.getElementById('resultScore').innerText = finalScore;
+  document.getElementById('resCorrect').innerText = correctCount;
+  document.getElementById('resWrong').innerText = wrongCount;
+  document.getElementById('resTime').innerText = `${m}:${s}`;
+
+  const badgeEl = document.getElementById('resultBadge');
+  if (Number(finalScore) >= PASSING_SCORE) {
+    badgeEl.innerText = 'LULUS SIMULASI UKP';
+    badgeEl.className = 'inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+  } else {
+    badgeEl.innerText = 'PERLU PERSIAPAN LAGI';
+    badgeEl.className = 'inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300';
+  }
+
+  renderReview();
+}
+
+// ==========================================
+// 3. QUIZ LOGIC
 // ==========================================
 
 function startQuiz(e) {
@@ -162,6 +312,7 @@ function startQuiz(e) {
   appState.currentIndex = 0;
   appState.answers = {};
   appState.timerSeconds = 0;
+  saveSession('quiz');
 
   document.getElementById('regScreen').classList.add('hidden');
   document.getElementById('quizScreen').classList.remove('hidden');
@@ -177,9 +328,27 @@ function startQuiz(e) {
 function startTimer() {
   clearInterval(appState.timerInterval);
   updateTimerDisplay();
+
+  // Pengaman jika sesi yang dipulihkan sudah mencapai batas waktu.
+  if (appState.timerSeconds >= MAX_TIME_SECONDS) {
+    appState.timerSeconds = MAX_TIME_SECONDS;
+    finishQuiz(true);
+    return;
+  }
+
   appState.timerInterval = setInterval(() => {
     appState.timerSeconds++;
+
+    if (appState.timerSeconds >= MAX_TIME_SECONDS) {
+      appState.timerSeconds = MAX_TIME_SECONDS;
+      updateTimerDisplay();
+      saveSession('quiz');
+      finishQuiz(true);
+      return;
+    }
+
     updateTimerDisplay();
+    if (appState.timerSeconds % 5 === 0) saveSession('quiz');
   }, 1000);
 }
 
@@ -238,6 +407,7 @@ function renderQuestion() {
 
 function selectOption(optIndex) {
   appState.answers[appState.currentIndex] = optIndex;
+  saveSession('quiz');
   renderQuestion();
 }
 
@@ -245,6 +415,7 @@ function navigateQuestion(direction) {
   const newIndex = appState.currentIndex + direction;
   if (newIndex >= 0 && newIndex < appState.questions.length) {
     appState.currentIndex = newIndex;
+    saveSession('quiz');
     renderQuestion();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -262,8 +433,11 @@ function confirmFinishQuiz() {
   finishQuiz();
 }
 
-function finishQuiz() {
+function finishQuiz(timeExpired = false) {
   clearInterval(appState.timerInterval);
+
+  // Pastikan waktu yang tercatat tidak pernah melebihi limit.
+  appState.timerSeconds = Math.min(appState.timerSeconds, MAX_TIME_SECONDS);
 
   let correctCount = 0;
   appState.questions.forEach((q, idx) => {
@@ -277,6 +451,8 @@ function finishQuiz() {
   const m = Math.floor(appState.timerSeconds / 60).toString().padStart(2, '0');
   const s = (appState.timerSeconds % 60).toString().padStart(2, '0');
   const timeStr = `${m}:${s}`;
+
+  saveSession('result');
 
   sendDataToSpreadsheet({
     nama: appState.user.nama,
@@ -311,11 +487,16 @@ function finishQuiz() {
   }
 
   renderReview();
+
+  if (timeExpired) {
+    alert(`Waktu maksimal ${MAX_TIME_MINUTES} menit telah habis. Simulasi otomatis diselesaikan.`);
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ==========================================
-// 3. SILENT DATA SUBMISSION
+// 4. SILENT DATA SUBMISSION
 // ==========================================
 
 async function sendDataToSpreadsheet(payload) {
@@ -338,7 +519,7 @@ async function sendDataToSpreadsheet(payload) {
 }
 
 // ==========================================
-// 4. REVIEW & EXPLANATION
+// 5. REVIEW & EXPLANATION
 // ==========================================
 
 function renderReview() {
@@ -403,6 +584,7 @@ function toggleReviewSection() {
 
 function resetApp() {
   clearInterval(appState.timerInterval);
+  clearSession();
   document.getElementById('resultScreen').classList.add('hidden');
   document.getElementById('reviewSection').classList.add('hidden');
   document.getElementById('regScreen').classList.remove('hidden');
@@ -416,7 +598,7 @@ function resetApp() {
 }
 
 // ==========================================
-// 5. QUESTION GRID MODAL
+// 6. QUESTION GRID MODAL
 // ==========================================
 
 function openQuestionGrid() {
@@ -447,13 +629,14 @@ function closeQuestionGrid() {
 
 function jumpToQuestion(idx) {
   appState.currentIndex = idx;
+  saveSession('quiz');
   renderQuestion();
   closeQuestionGrid();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ==========================================
-// 6. CALCULATOR WIDGET
+// 7. CALCULATOR WIDGET
 // ==========================================
 
 let calcState = { cur: '0', prev: '', op: null };
